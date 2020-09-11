@@ -14,35 +14,45 @@ if (semver.gt('8.3.0', versions.node)) {
 var fs = require('fs')
   , boot = require('./boot')
 
-boot(function (err, zenbot) {
-  if (err) {
-    throw err
-  }
-  program.version(zenbot.version)
-
-  var command_directory = './commands'
-  fs.readdir(command_directory, function(err, files){
+zenbot_main = function (argv) {
+  boot(function (err, zenbot) {
     if (err) {
       throw err
     }
-    
-    var commands = files.map((file)=>{
-      return path.join(command_directory, file)
-    }).filter((file)=>{
-      return fs.statSync(file).isFile()
-    })
+    program.version(zenbot.version)
 
-    commands.forEach((file)=>{
-      require(path.resolve(__dirname, file.replace('.js','')))(program, zenbot.conf)
-    })
-
-    program
-      .command('*', 'Display help', { noHelp: true })
-      .action((cmd)=>{
-        console.log('Invalid command: ' + cmd)
-        program.help()
+    var command_directory = __dirname + '/commands'
+    fs.readdir(command_directory, function(err, files){
+      if (err) {
+        throw err
+      }
+      
+      var commands = files.map((file)=>{
+        return path.join(command_directory, file)
+      }).filter((file)=>{
+        return fs.statSync(file).isFile()
       })
 
-    program.parse(process.argv)
+      // console.log(commands)
+      // console.log(process.argv)
+      commands.forEach((file)=>{
+        require(path.resolve(__dirname, file.replace('.js','')))(program, zenbot.conf)
+      })
+
+      program
+        .command('*', 'Display help', { noHelp: true })
+        .action((cmd)=>{
+          console.log('Invalid command: ' + cmd)
+          program.help()
+        })
+
+      program.parse(argv)
+    })
   })
-})
+}
+
+module.exports = zenbot_main
+
+if (require.main === module) {
+  zenbot_main(process.argv)
+}
